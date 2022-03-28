@@ -1,17 +1,15 @@
 import "./App.css";
-import { NearPanel } from "./component/Near/NearPanel";
+import "./assets/fonts/robotomono.css";
+import { Routes, Route } from "react-router-dom";
+import { Home } from "./components/Home";
+import { Prerequisites } from "./components/Prerequisites";
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        {/* <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p> */}
-        <NearPanel />
-      </header>
-    </div>
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/prerequisites" element={<Prerequisites />} />
+    </Routes>
   );
 }
 
