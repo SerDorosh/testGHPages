@@ -1,11 +1,14 @@
 import styled from "styled-components";
-import * as nearAPI from "near-api-js";
 import { Button } from "../Button";
 import { useEffect, useState } from "react";
-import { wallet, getAccount, SENDER_PRIVATE_KEY, config } from "./config";
-// import { ConnectConfig } from "near-api-js";
+import { NearService, WalletService } from "./Store/NearServiceStore";
+import { FTWalletService } from "./Store/FTWalletService";
+
 window.global = window;
 window.Buffer = window.Buffer || require("buffer").Buffer;
+
+const CONTRACT_NAME = "dorosh.testnet";
+const TOKEN_CONTRACT_NAME = "tokens.testnet";
 
 const Flex = styled.div`
   display: flex;
@@ -71,6 +74,7 @@ const Input = styled.input`
   color: #fff;
   border: 0px solid #000000;
   border-bottom: 3px solid #6b6ef9;
+  outline: none;
 `;
 
 const Line = styled.div`
@@ -91,116 +95,48 @@ const NameWrap = styled.div`
   align-items: center;
 `;
 
-const { utils, KeyPair, keyStores, connect } = nearAPI;
-
-const getNEARInYoctoNEAR = (near: string) => {
-  return utils.format.parseNearAmount(near);
-};
-
 export const NearPanel = () => {
   const [isSignedIn, setIsSignedIn] = useState(false);
-  const [thisWallet, setThisWallet] = useState<nearAPI.WalletConnection>();
+  const [thisWallet, setThisWallet] = useState<WalletService>();
   const [receiverAccount, setReceiverAccount] = useState<string>();
   const [amountNear, setAmountNear] = useState<string>("0");
-  const [accountId, setAccountId] = useState<string>();
-  const [account, setAccount] = useState<nearAPI.Account>();
+
+  const nearConfig = {
+    walletFormat: ".testnet",
+    networkId: "testnet",
+    nodeUrl: "https://rpc.testnet.near.org",
+    contractName: CONTRACT_NAME,
+    tokenContractName: TOKEN_CONTRACT_NAME,
+    walletUrl: "https://wallet.testnet.near.org",
+    helperUrl: "https://helper.testnet.near.org",
+    explorerUrl: "https://explorer.testnet.near.org",
+    headers: {},
+  };
 
   useEffect(() => {
-    if (!isSignedIn) {
-      wallet(config).then((data) => {
-        setThisWallet(data);
-        setIsSignedIn(data.isSignedIn());
-        setAccountId(data.getAccountId());
-      });
-    }
-  }, [isSignedIn]);
+    const ftService = new NearService(new FTWalletService(nearConfig));
+    setThisWallet(ftService);
+    //@ts-ignore
+    // eslint-disable-next-line
+  }, []);
+
   useEffect(() => {
-    if (accountId) {
-      getAccount(config, accountId).then((accountData: nearAPI.Account) => {
-        setAccount(accountData);
-      });
-    }
-  }, [accountId]);
-  const signOut = () => {
     if (thisWallet) {
-      thisWallet.signOut();
       setIsSignedIn(thisWallet.isSignedIn());
     }
+  }, [thisWallet]);
+
+  const signOut = () => {
+    thisWallet?.logout();
+    setIsSignedIn(false);
   };
 
   const signIn = () => {
-    if (thisWallet) {
-      thisWallet.requestSignIn();
-    }
+    thisWallet?.signIn(nearConfig.contractName);
   };
 
-  // const deployContract = async () => {
-  //   const networkId = "testnet";
-  //   const keyStore = new keyStores.InMemoryKeyStore();
-  //   const keyPair = KeyPair.fromString(SENDER_PRIVATE_KEY);
-  //   await keyStore.setKey(networkId, accountId as string, keyPair);
-  //   const config = {
-  //     networkId,
-  //     keyStore,
-  //     nodeUrl: "https://rpc.testnet.near.org",
-  //     walletUrl: "https://wallet.testnet.near.org",
-  //     helperUrl: "https://helper.testnet.near.org",
-  //     explorerUrl: "https://explorer.testnet.near.org",
-  //     headers: {
-  //       "Access-Control-Allow-Origin": "*",
-  //     },
-  //   };
-  //   const near = await connect(config);
-  //   const account = await near.account(accountId as string);
-  //   // const response = await account.deployContract(
-  //   //   // fs.readFileSync("./wasm_files/status_message.wasm")
-  //   // );
-  //   // console.log(response);
-  // };
-
-  const sendNear = async () => {
-    const networkId = "testnet";
-    const keyStore = new keyStores.InMemoryKeyStore();
-    const keyPair = KeyPair.fromString(SENDER_PRIVATE_KEY);
-    await keyStore.setKey(networkId, accountId as string, keyPair);
-    // const cors = require("cors");
-    // const express = require("express");
-    // const app = express();
-    // app.use("*", cors());
-
-    // const bodyParser = require("body-parser");
-    // const cors = require("cors");
-    // require("dotenv");
-
-    const config = {
-      networkId,
-      keyStore,
-      nodeUrl: "https://rpc.testnet.near.org",
-      walletUrl: "https://wallet.testnet.near.org",
-      helperUrl: "https://helper.testnet.near.org",
-      explorerUrl: "https://explorer.testnet.near.org",
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET,POST,OPTIONS,DELETE",
-        "Access-Control-Allow-Headers":
-          "X-Requested-With, Access-Control-Allow-Headers, Content-Type, Authorization, Origin, Accept",
-        "Access-Control-Allow-Credentials": "true",
-      },
-    };
-
-    const near = await connect(config);
-    const senderAccount = await near.account(accountId as string);
-    console.log("1");
-    try {
-      console.log(`Sending ...`);
-      const result = await senderAccount.sendMoney(
-        receiverAccount as string,
-        getNEARInYoctoNEAR(amountNear)
-      );
-      console.log("Transaction Results: ", result.transaction);
-    } catch (error) {
-      console.log("111", error);
-    }
+  const submitHandler = async () => {
+    await thisWallet?.sendMoney(receiverAccount as string, +amountNear);
   };
 
   return (
@@ -218,7 +154,7 @@ export const NearPanel = () => {
                   <DecorateLine />
                   <Line />
                 </CardDecorateBottom>
-                <CardText>{accountId}</CardText>
+                <CardText>{thisWallet?.getAccountId()}</CardText>
               </CardWrap>
             </NameWrap>
           </>
@@ -249,7 +185,7 @@ export const NearPanel = () => {
             text="Send Near"
             callback={async () => {
               if (receiverAccount && amountNear) {
-                sendNear();
+                submitHandler();
               }
             }}
           />

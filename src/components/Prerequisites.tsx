@@ -20,8 +20,8 @@ const ContentBlock = styled.div`
 `;
 
 const ButtonWrap = styled.div`
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
   width: 80%;
 `;
 
@@ -77,7 +77,7 @@ export const Prerequisites = () => {
             navigate("/");
           }}
         />
-        {isCopied && <СopiedAlert />}
+        {isCopied ? <СopiedAlert /> : <div></div>}
         <Button
           text="Next >"
           callback={() => {
